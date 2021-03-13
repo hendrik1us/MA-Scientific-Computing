@@ -1,2 +1,3 @@
 # MA-Scientific-Computing
-This code is used in my master's thesis.
+
+This code is used to calculate the approximate rank of families of matrices which are induced by latent variable models. 

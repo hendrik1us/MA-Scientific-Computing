@@ -170,7 +170,7 @@ void polynomiald2KMKL(int size, double* a, double* b, double* c, int thread_ID) 
 	double pow = 2.0;
 	double offset = 1;
 	int inc = 1;
-	int vsize= 1;
+	int vsize = 1;
 	double tmp;
 	tmp = cblas_ddot(size, a, inc, b, inc);
 	tmp = tmp + offset;
@@ -195,12 +195,12 @@ void cosineKMKL(int size, double* a, double* b, double* c, int thread_ID) {
 	*c = M_PI_4 * *c;
 }
 
-void bsplineMKL(int vsize, double* a, double deg, double*c, int thread_ID) {
+void bsplineMKL(int vsize, double* a, double deg, double* c, int thread_ID) {
 	/* not used */
 	double sign = 0.0;
 	double tmp = 0.0;
 	*c = 0.0;
-	for (int r = 0; r <= deg+1; r++)
+	for (int r = 0; r <= deg + 1; r++)
 	{
 		vdPowx(vsize, &mone, r, &sign);
 		tmp = *a + (deg + 1) / 2 - r;
@@ -220,18 +220,18 @@ void bsplineKMKL(int size, double* a, double* b, double* c, int thread_ID) {
 	std::unique_ptr<double[]> bspl1D = std::make_unique<double[]>(size);
 	*c = 1.0;
 	for (unsigned int i = 0; i < size; i++)
-		{
+	{
 		diff = a[i] - b[i];
 		bsplineMKL(vsize, &diff, deg, &(bspl1D.get()[i]), thread_ID);
 		*c = bspl1D.get()[i] * *c;
-		}
+	}
 }
 
 void _01LossMKL(int size, double* a, double* b, double* c, int thread_ID) {
 	int vsize = 1;
 	double tmp = 0;
 	double delta = 1.4;
-	sedMKL(size, a, b, &tmp, thread_ID); 
+	sedMKL(size, a, b, &tmp, thread_ID);
 	vdSqrt(vsize, &tmp, &tmp);
 	if (tmp < delta)
 		*c = 0;
@@ -324,6 +324,7 @@ unsigned long long int epsBoundMKL(int m, int n, double Cu, double Cv, double ep
 unsigned int getEpsRank(int m, int n, double* nlvm, double eps, double tol, int& no_conv_flag) {
 
 	no_conv_flag = 0;
+	bool last_iter = false;
 	/* Local Variable Definitions */
 	int minmn = std::min(m, n);
 	unsigned int epsRank = minmn;
@@ -344,7 +345,7 @@ unsigned int getEpsRank(int m, int n, double* nlvm, double eps, double tol, int&
 
 	/* Perform SVD*/
 #ifdef MKL
-	int status = svdMKL(m, n, nlvm, U.get(), s.get(), VT.get(), superb.get()); 
+	int status = svdMKL(m, n, nlvm, U.get(), s.get(), VT.get(), superb.get());
 	gendiagm(m, n, s.get(), S.get());
 #endif // MKL
 	//arma svd as alternative, but not thread-safe!
@@ -359,7 +360,7 @@ unsigned int getEpsRank(int m, int n, double* nlvm, double eps, double tol, int&
 	/* Initial Domain Splitting */
 	std::vector<SV_ERR_> sv_err_vec(n_threads);
 	bounds = { 0,m }; // Domain Initialization
-	splitDomain(sv_err_vec, sv_err_vec_rmdr, bounds, n_threads,m);
+	splitDomain(sv_err_vec, sv_err_vec_rmdr, bounds, n_threads, m, INITIAL);
 	int n_rmdr = sv_err_vec_rmdr.size();
 
 	/* Initialize Loop Condition */
@@ -400,32 +401,55 @@ unsigned int getEpsRank(int m, int n, double* nlvm, double eps, double tol, int&
 		}
 #endif // OMP
 
-		/* Case: Error lays in (Epsilon - Epsilon*Tolerance, Epsilon + Epsilon*Tolerance ) */
+		/* Case: Error lays in (Epsilon - Epsilon*Tolerance, Epsilon + Epsilon*Tolerance) */
 		if (checkIfInTolerance(sv_err_vec, eps, tol, epsRank, n_threads))
 			return epsRank;
 
-		/* Case: No convergence. Closest Error < Epsilon */
-		if (sv_err_vec_rmdr.size() > 0)
+		/* Determine Refinement Domain */
+		if (!last_iter)
 		{
-			sv_err_vec_rmdr.clear();
-			int tar_idx = handleNoConv(n_rmdr, sv_err_vec, eps, no_conv_flag);
+			bounds = checkForBitFlip(sv_err_vec, eps, m, n);
+			if (bounds.upper==bounds.lower)
+			{
+				epsRank = bounds.upper;
+				return epsRank;
+			}
+			if (bounds.upper - bounds.lower < n_threads)
+			{
+				last_iter = true;
+				sv_err_vec_rmdr = sv_err_vec;
+				sv_err_vec.clear();
+
+				for (int i = bounds.lower; i <= bounds.upper; i++)
+				{
+					SV_ERR_ tmp{ i,0 };
+					sv_err_vec.push_back(tmp);
+				}
+				n_rmdr = bounds.upper - bounds.lower + 1;
+				continue;
+			}
+		}
+		
+
+		/* Case: No convergence. Closest Error to Epsilon */
+		if (last_iter)
+		{
+			int tar_idx = handleNoConv(sv_err_vec.size(), sv_err_vec, eps, no_conv_flag);
 			if (tar_idx > -1) {
 				epsRank = sv_err_vec[tar_idx].nsv;
 				return epsRank;
 			}
 		}
 
-		/* Determine Refinement Domain */
-		bounds = checkForBitFlip(sv_err_vec, eps,m,n);
-
 		/* Split Refinement Domain */
-		if (splitDomain(sv_err_vec, sv_err_vec_rmdr, bounds, n_threads,m))
+		if (splitDomain(sv_err_vec, sv_err_vec_rmdr, bounds, n_threads - 1, m, NOT_INITIAL))
 		{
-			if (sv_err_vec_rmdr.size() >0)
+			if (sv_err_vec_rmdr.size() > 0)
 			{
 				n_rmdr = sv_err_vec_rmdr.size();
 				sv_err_vec.clear();
 				sv_err_vec = sv_err_vec_rmdr;
+				last_iter = true;
 			}
 			else
 				n_rmdr = sv_err_vec.size();

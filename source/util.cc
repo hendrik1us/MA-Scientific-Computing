@@ -200,7 +200,14 @@ SPLIT_BOUNDS checkForBitFlip(std::vector<SV_ERR_> sv_err_vec, double eps, int m,
 		{
 			if (less_eps[j - 1] != less_eps[j])
 			{
-				bounds = { sv_err_vec[j - 1].nsv + 1, sv_err_vec[j].nsv - 1 };
+				if (sv_err_vec[j].nsv - 1 - (sv_err_vec[j - 1].nsv + 1) <=0)
+				{
+					bounds = { sv_err_vec[j].nsv - 1 ,sv_err_vec[j].nsv - 1 };
+				}
+				else 
+				{
+					bounds = { sv_err_vec[j - 1].nsv + 1, sv_err_vec[j].nsv - 1 };
+				}
 				count_bit_flips = count_bit_flips + 1;
 			}
 		}
@@ -212,27 +219,30 @@ SPLIT_BOUNDS checkForBitFlip(std::vector<SV_ERR_> sv_err_vec, double eps, int m,
 
 	if (std::equal(less_eps.begin() + 1, less_eps.end(), less_eps.begin()))
 	{
-		int step_size = sv_err_vec[1].nsv - sv_err_vec[0].nsv;
+		int size = sv_err_vec[1].nsv - sv_err_vec[0].nsv -2;
 		if (!less_eps[0])
 		{
-			bounds = { sv_err_vec[sv_err_vec.size() - 1].nsv + 1, std::min(sv_err_vec[sv_err_vec.size() - 1].nsv + step_size,m-1) };
+			bounds = { sv_err_vec[sv_err_vec.size() - 1].nsv + 1, std::min(sv_err_vec[sv_err_vec.size() - 1].nsv +1 + size,m-1) };
 		}
 		else
 		{
-			bounds = { std::max(sv_err_vec[0].nsv - step_size,1), sv_err_vec[0].nsv - 1 };
+			bounds = { std::max(sv_err_vec[0].nsv-1 - size,1), sv_err_vec[0].nsv };
 		}
 		return bounds;
 	}
 }
 
-bool splitDomain(std::vector<SV_ERR_>& sv_err_vec, std::vector<SV_ERR_>& sv_err_vec_rmdr, SPLIT_BOUNDS bounds, int n_splits, int upper_bound) {
+bool splitDomain(std::vector<SV_ERR_>& sv_err_vec, std::vector<SV_ERR_>& sv_err_vec_rmdr, SPLIT_BOUNDS bounds, int n_splits, int upper_bound, int CASE) {
 	int domain_size = bounds.upper - bounds.lower;
-	double size_splitted = static_cast<double>(domain_size) / static_cast<double>(n_splits);
+	if (CASE == INITIAL)
+		n_splits = n_splits - 1;
+
+	double size_splitted = static_cast<double>(domain_size) / static_cast<double>(n_splits+1);
 	bool rmdr_filled = false;
 	double err = 0.0;
 	int c = 0;
 
-	if (size_splitted < 1)
+	if (size_splitted <= 1)
 	{
 		for (int i = 0; i < domain_size; i++)
 			sv_err_vec_rmdr.push_back({ bounds.lower + i, err });
@@ -240,9 +250,22 @@ bool splitDomain(std::vector<SV_ERR_>& sv_err_vec, std::vector<SV_ERR_>& sv_err_
 	}
 	else
 	{
-		for (int i = 0; i < n_splits; i++) {
-			sv_err_vec[i].nsv = bounds.lower + i * std::ceil(size_splitted);
-			if (sv_err_vec[i].nsv > upper_bound - 1) {
+		for (int i = 0; i < n_splits+1; i++) {
+			if (CASE==INITIAL)
+			{
+				sv_err_vec[i].nsv = bounds.lower + (i + 1)* std::floor(size_splitted);
+			}
+			else
+			{
+				if (i == n_splits) {
+					sv_err_vec[i].nsv = bounds.upper;
+				}
+				else
+				{
+					sv_err_vec[i].nsv = bounds.lower + i * std::floor(size_splitted);
+				}
+			}
+			if (sv_err_vec[i].nsv > upper_bound) {
 				sv_err_vec.erase(sv_err_vec.begin() + i, sv_err_vec.begin() + sv_err_vec.size());
 				rmdr_filled = true;
 				break;

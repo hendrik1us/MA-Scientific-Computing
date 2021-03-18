@@ -19,6 +19,12 @@ struct SPLIT_BOUNDS
 	int upper;
 };
 
+enum REFINEMENT_CASES
+{
+	INITIAL,
+	NOT_INITIAL
+};
+
 struct SV_ERR_
 {
 	int nsv;
@@ -45,7 +51,7 @@ std::string create_file_name(char const* ex_name, char const* nlvm_name, char co
 
 /* Miscellaneous */
 SPLIT_BOUNDS checkForBitFlip(std::vector<SV_ERR_> sv_err_vec, double eps, int m, int n);
-	bool splitDomain(std::vector<SV_ERR_>& sv_err_vec, std::vector<SV_ERR_>& sv_err_vec_rmdr, SPLIT_BOUNDS bounds, int n_splits, int upper_bound);
+	bool splitDomain(std::vector<SV_ERR_>& sv_err_vec, std::vector<SV_ERR_>& sv_err_vec_rmdr, SPLIT_BOUNDS bounds, int n_splits, int upper_bound,int CASE);
 bool checkIfInTolerance(std::vector<SV_ERR_> sv_err_vec, double eps, double tol, unsigned int& epsRank, int n_threads);
 int handleNoConv(int n_rmdr, std::vector<SV_ERR_> sv_err_vec, double eps, int& no_conv_flag);
 std::vector<int> extractNSV(std::vector<SV_ERR_> sv_err_vec);

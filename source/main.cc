@@ -74,10 +74,11 @@ int main()
 	_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
 	_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
 #endif // DEBUG
+
 		int factor = 100;
 
-		std::vector<int> ns1(30);
-		std::vector<int> ns2(30);
+		std::vector<int> ns1(10);
+		std::vector<int> ns2(10);
 		std::iota(std::begin(ns1), std::end(ns1), 1);
 		std::iota(std::begin(ns2), std::end(ns2), 1);
 
@@ -109,10 +110,8 @@ int main()
 		/*writeResults("01LOSSMKL", "Ex7", "EpsRank", "UnifSampleFromNSphere","Trial1",nlvm_dims);
 		writeResults("01LOSSMKL", "Ex7", "EpsRank", "UnifSampleFromNSphere", "Trial2", nlvm_dims);
 		*/
-		writeResults("01LOSSMKL", "Ex7", "EpsRank", "UnifSampleFromNSphere", "Trial3", nlvm_dims);
-		writeResults("01LOSSMKL", "Ex7", "EpsRank", "UnifSampleFromNSphere", "Trial4", nlvm_dims);
-		writeResults("01LOSSMKL", "Ex7", "EpsRank", "UnifSampleFromNSphere", "Trial5", nlvm_dims);
-		
+		//writeResults("01LOSSMKL", "Ex7", "EpsRank", "UnifSampleFromNSphere", "Trial3", nlvm_dims);
+		//writeResults("01LOSSMKL", "Ex7", "EpsRank", "UnifSampleFromNSphere", "Trial4", nlvm_dims);		
 		
 		/*writeResults("POLYNOMIAL3K", "Ex5", "EpsRank", "UnifSampleFromNSphere", "Trial2", nlvm_dims);
 		writeResults("POLYNOMIAL3K", "Ex5", "EpsRank", "UnifSampleFromNSphere", "Trial3", nlvm_dims);

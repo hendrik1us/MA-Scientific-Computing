@@ -5,6 +5,8 @@
 #define MKL
 #define MKL_TEST 0
 
+#define LMBOUND_TEST
+
 #define EXTERN
 #define EXTERN_REPO
 

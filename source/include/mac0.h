@@ -5,8 +5,6 @@
 #define MKL
 #define MKL_TEST 0
 
-#define LMBOUND_TEST
-
 #define EXTERN
 #define EXTERN_REPO
 
@@ -20,21 +18,15 @@ constexpr char const* EXAMPLE_PATH = "C:\\Users\\h_dei\\Documents\\Master TU Ber
 constexpr char const* RESULTS_PATH = "C:\\Users\\h_dei\\Documents\\Master TU Berlin\\Module\\Masterarbeit\\Data\\Results\\";
 #endif // EXTERN_REPO
 
-
 //#define TBB //alternative to OMP
-
 //#define DEBUG
 
 #ifdef DEBUG
-
 #ifndef TBB
 //#undef _DEBUG
 #define _CRTDBG_MAP_ALLOC
+
 #endif // !TBB
-
-
 #endif // DEBUG
-
-
 #endif // !MAC0_H
 

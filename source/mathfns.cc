@@ -1,11 +1,9 @@
 #include "mac0.h"
 
-
 #ifdef MKL
 #include <mkl.h>
 #include <algorithm>
 #include <memory>
-
 #include "matrixgen.h"
 #endif // MKL
 
@@ -88,7 +86,7 @@ int svdMKL(int m, int n, double* A, double* U, double* s, double* VT, double* su
 	return LAPACKE_dgesvd(layout, jobu, jobvt, m, n, A, lda, s, U, ldu, VT, ldvt, superb);
 }
 
-/* Rank-k-Approximation by SVD */
+/* Rank-r-Approximation by SVD */
 void mreconMKL(int m, int n, int k, double* U, double* S, double* VT, double* A, double* TMP, int thread_ID) {
 
 	int ldU, ldS, ldUS, ldVT;
@@ -228,6 +226,7 @@ void bsplineKMKL(int size, double* a, double* b, double* c, int thread_ID) {
 }
 
 void _01LossMKL(int size, double* a, double* b, double* c, int thread_ID) {
+	/* not used */
 	int vsize = 1;
 	double tmp = 0;
 	double delta = 1.4;
@@ -465,162 +464,3 @@ unsigned int getEpsRank(int m, int n, double* nlvm, double eps, double tol, int&
 	}
 }
 #endif // EXTERN
-
-
-
-
-
-
-
-
-
-#if 0
-/* should be executed just once */
-double err(n_threads);
-std::fill(err.begin(), err.end(), eps + 1);
-
-std::vector<unsigned int> epsRank(n_threads), iter(n_threads);
-std::fill(epsRank.begin(), epsRank.end(), 0);
-std::fill(iter.begin(), iter.end(), 0);
-
-dvec sing;
-dmat left, right;
-std::vector<float> fractional_size(n_threads);
-std::fill(fractional_size.begin(), fractional_size.end(), 2.0);
-
-std::vector<float> tmp(n_threads);
-std::vector<float> rate(n_threads);
-std::fill(rate.begin(), rate.end(), 1.5);
-float tol = 0.01; // make dependent on thread?
-std::vector<dmat> approx(n_threads);
-
-std::vector<int> nSingValsAdjusted(n_threads);
-std::fill(nSingValsAdjusted.begin(), nSingValsAdjusted.end(), 0);
-bool status = false;
-
-status = arma::svd(left, sing, right, armaDmat);
-
-
-std::vector<SV_ERR_> SV_ERR(n_threads);
-std::vector<std::vector<SV_ERR_>> sv_err_vec(SV_ERR.size());
-
-if (!status)
-return 0; //dann versucht anderer thread nochmals svd ?
-
-float mat_size = arma::size(armaDmat)[0];
-std::fill(tmp.begin(), tmp.end(), mat_size / fractional_size[0]);
-std::vector<int> nSingVals(n_threads);
-std::fill(nSingVals.begin(), nSingVals.end(), int(tmp[0]));
-/* until here */
-// bis hier sollte es laufen
-
-while (err[threadID] > eps)
-{
-	if (maxIter == iter[threadID])
-		return 0;
-
-	if (nSingVals[threadID] < 1)
-		nSingVals[threadID] = 1;
-
-	if (nSingVals[threadID] > mat_size - 1)
-		nSingVals[threadID] = (int)mat_size;
-
-
-	nSingValsAdjusted[threadID] = nSingVals[threadID];
-
-	std::vector<bool> return_orig(n_threads);
-	std::fill(return_orig.begin(), return_orig.end(), false);
-
-	/* Composition */
-
-	/* leftSingVecs unitary square matrix nxn, rightSingVecs unitary matrix mxm	*/
-	std::vector<bool> compare1(n_threads);
-
-	compare1[threadID] = nSingVals[threadID] < sing.n_rows;
-
-	std::vector<bool> compare2(n_threads);
-
-	compare2[threadID] = nSingVals[threadID] == sing.n_rows;
-
-	if (compare1[threadID])
-	{
-		std::vector<dmat> u(n_threads);
-		std::vector<dvec> svs(n_threads);
-		std::vector<dmat> vt(n_threads);
-
-
-		u[threadID] = left.cols(0, nSingVals[threadID] - 1);
-
-		svs[threadID] = sing.rows(0, nSingVals[threadID] - 1);
-
-		vt[threadID] = right.cols(0, nSingVals[threadID] - 1).t();
-		approx[threadID] = u[threadID] * diagmat(svs[threadID]) * vt[threadID];
-	}
-
-	if (compare2[threadID])
-	{
-
-		return_orig[threadID] = true;
-
-	}
-	else // ?
-	{
-		dmat approx = zeros(sing.n_rows, sing.n_rows);
-	}
-
-	if (return_orig[threadID])
-		err[threadID] = 0;
-	else
-		err[threadID] = matrixMaxNormP(armaDmat, approx[threadID], threadID);
-
-
-	epsRank[threadID] = nSingVals[threadID];
-
-	SV_ERR[threadID].err = err[threadID];
-	SV_ERR[threadID].sv = nSingVals[threadID];
-	sv_err_vec.push_back(SV_ERR);
-
-	bool descent_found = false;
-	sv_err_checkP(sv_err_vec[threadID], eps, descent_found, threadID);
-	if (descent_found) {
-		if (abs(sv_err_vec.end()[threadID][-2].err - eps) > abs(sv_err_vec.end()[threadID][-1].err - eps))
-			epsRank[threadID] = sv_err_vec.end()[threadID][-1].sv;
-		else
-			epsRank[threadID] = sv_err_vec.end()[threadID][-2].sv;
-		return epsRank[threadID];
-	}
-
-	if (abs(err[threadID] - eps) < tol * eps)
-		return epsRank[threadID];
-
-	if (err[threadID] < eps)
-	{
-		fractional_size[threadID] = ceil(fractional_size[threadID] * rate[threadID]);
-		tmp[threadID] = mat_size / fractional_size[threadID];
-		nSingVals[threadID] = nSingVals[threadID] - int(tmp[threadID]);
-		err[threadID] = eps + 1;
-
-		if (nSingVals[threadID] == nSingValsAdjusted[threadID]) {
-			no_conv_flag = 1; // kritisch ? 
-			return epsRank[threadID];
-		}
-		iter[threadID]++;
-		//continue;
-	}
-
-
-	if (err[threadID] > eps)
-	{
-		fractional_size[threadID] = ceil(fractional_size[threadID] * rate[threadID]);
-		tmp[threadID] = mat_size / fractional_size[threadID];
-		nSingVals[threadID] = nSingVals[threadID] + int(tmp[threadID]);
-		if (nSingVals[threadID] == nSingValsAdjusted[threadID]) {
-			no_conv_flag = 1;
-			return epsRank[threadID];
-		}
-		iter[threadID]++;
-	}
-
-}
-return epsRank[threadID];
-#endif 0

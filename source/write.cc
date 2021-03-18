@@ -349,7 +349,7 @@ void writeResults(char const* nlvm_name, char const* Exn, char const* result_nam
 		epsVec = { 0.1, 0.06, 0.03, 0.02, 0.01, 0.005}; ; //POLYNOMIALK d=3
 		epsVec = {150000,100000,50000,25000, 10000, 1000}; //CHISQRK
 		epsVec = { 2, 1, 0.5, 0.3, 0.17, 0.03 }; //L1LOSSMKL
-		//epsVec = { 1.3, 1.0, 0.7, 0.4, 0.2, 0.05 }; // 01LOSSMKL
+		//epsVec = { 1.3, 1.0, 0.7, 0.4, 0.2, 0.05 }; // 01LOSSMKL 
 
 		for (auto eps : epsVec)
 		{
